@@ -1,0 +1,565 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>quà Valentine cho <em>Đinh Nguyễn Thị Xuân Mai</em></title>
+
+  <style>
+    :root{
+      --bg1:#05020a;
+      --bg2:#12051f;
+      --pink:#ff4d8d;
+      --gold:#ffd966;
+      --glass: rgba(255,255,255,.08);
+      --glass2: rgba(255,255,255,.14);
+      --text: rgba(255,255,255,.92);
+      --muted: rgba(255,255,255,.65);
+    }
+    *{box-sizing:border-box}
+    body{
+      margin:0;
+      min-height:100vh;
+      overflow:hidden;
+      font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
+      color:var(--text);
+      background: radial-gradient(1200px 800px at 50% 35%, #240a3b 0%, var(--bg2) 35%, var(--bg1) 70%, #000 100%);
+    }
+
+    /* --- background sparkles --- */
+    .sparkles{
+      position:fixed; inset:0;
+      pointer-events:none;
+      background-image:
+        radial-gradient(2px 2px at 20% 30%, rgba(255,255,255,.6) 50%, transparent 55%),
+        radial-gradient(1.5px 1.5px at 70% 20%, rgba(255,255,255,.35) 50%, transparent 55%),
+        radial-gradient(1.5px 1.5px at 85% 55%, rgba(255,255,255,.45) 50%, transparent 55%),
+        radial-gradient(2px 2px at 35% 70%, rgba(255,255,255,.25) 50%, transparent 55%),
+        radial-gradient(1px 1px at 55% 80%, rgba(255,255,255,.35) 50%, transparent 55%);
+      filter: drop-shadow(0 0 12px rgba(255,255,255,.08));
+      opacity:.8;
+      animation: twinkle 5s ease-in-out infinite;
+    }
+    @keyframes twinkle{
+      0%,100%{opacity:.75}
+      50%{opacity:1}
+    }
+
+    /* --- center layout --- */
+    .wrap{
+      position:relative;
+      width:100%;
+      height:100vh;
+      display:flex;
+      flex-direction:column;
+      align-items:center;
+      justify-content:center;
+      gap:18px;
+      padding:24px;
+      text-align:center;
+    }
+
+    .title{
+      font-size: clamp(22px, 3.2vw, 44px);
+      letter-spacing: .08em;
+      margin:0;
+      font-weight:800;
+      text-transform:uppercase;
+      background: linear-gradient(180deg, #fff, #ffd6e6);
+      -webkit-background-clip:text;
+      background-clip:text;
+      color:transparent;
+      text-shadow: 0 0 36px rgba(255,255,255,.15);
+    }
+    .subtitle{
+      margin:0;
+      color:var(--muted);
+      font-size: clamp(12px, 1.5vw, 16px);
+      letter-spacing:.06em;
+    }
+
+    /* --- Gift box --- */
+    .gift-area{
+      position:relative;
+      width:min(360px, 78vw);
+      height:min(360px, 78vw);
+      display:grid;
+      place-items:center;
+      margin-top:10px;
+    }
+    .gift{
+      width: 220px;
+      height: 220px;
+      position:relative;
+      cursor:pointer;
+      transform-origin: 50% 70%;
+      animation: floaty 2.8s ease-in-out infinite;
+      filter: drop-shadow(0 30px 60px rgba(0,0,0,.5));
+      outline:none;
+    }
+    .gift:focus-visible{
+      box-shadow: 0 0 0 4px rgba(255,77,141,.35);
+      border-radius:18px;
+    }
+    @keyframes floaty{
+      0%,100%{transform: translateY(0) rotate(-1deg)}
+      50%{transform: translateY(-10px) rotate(1deg)}
+    }
+
+    .box{
+      position:absolute; left:0; right:0; bottom:0;
+      width:220px; height:150px;
+      margin:auto;
+      border-radius:18px;
+      background: linear-gradient(145deg, rgba(255,77,141,.9), rgba(160,30,90,.85));
+      border:1px solid rgba(255,255,255,.15);
+      overflow:hidden;
+    }
+    .box:before{
+      content:"";
+      position:absolute; inset:0;
+      background:
+        linear-gradient(90deg, transparent 0%, rgba(255,255,255,.18) 40%, transparent 70%),
+        radial-gradient(120px 60px at 30% 30%, rgba(255,255,255,.18), transparent 60%);
+      opacity:.65;
+      mix-blend-mode: screen;
+    }
+    .ribbon-vert{
+      position:absolute;
+      left:50%; top:0;
+      transform: translateX(-50%);
+      width:26px; height:150px;
+      background: linear-gradient(180deg, rgba(255,217,102,.95), rgba(255,180,40,.85));
+      box-shadow: 0 0 18px rgba(255,217,102,.25);
+    }
+    .ribbon-horz{
+      position:absolute;
+      left:0; top:58px;
+      width:220px; height:24px;
+      background: linear-gradient(90deg, rgba(255,217,102,.95), rgba(255,180,40,.85));
+      box-shadow: 0 0 18px rgba(255,217,102,.22);
+    }
+
+    .lid{
+      position:absolute; left:0; right:0; top:30px;
+      width:220px; height:78px;
+      margin:auto;
+      border-radius:18px;
+      background: linear-gradient(145deg, rgba(255,105,170,.95), rgba(170,45,110,.9));
+      border:1px solid rgba(255,255,255,.18);
+      transform-origin: 50% 100%;
+      transition: transform .7s cubic-bezier(.2,.8,.2,1);
+    }
+    .lid:before{
+      content:"";
+      position:absolute; inset:0;
+      background: linear-gradient(90deg, transparent 0%, rgba(255,255,255,.20) 45%, transparent 75%);
+      opacity:.65;
+      mix-blend-mode: screen;
+    }
+
+    .bow{
+      position:absolute;
+      left:50%; top:0;
+      transform: translate(-50%, -12px);
+      width:160px; height:90px;
+      pointer-events:none;
+      filter: drop-shadow(0 10px 18px rgba(0,0,0,.35));
+    }
+    .bow:before, .bow:after{
+      content:"";
+      position:absolute;
+      top:18px;
+      width:68px; height:48px;
+      border-radius: 40px 40px 12px 40px;
+      background: linear-gradient(145deg, rgba(255,217,102,.98), rgba(255,170,30,.88));
+      border:1px solid rgba(255,255,255,.22);
+    }
+    .bow:before{
+      left:8px;
+      transform: rotate(-18deg);
+    }
+    .bow:after{
+      right:8px;
+      transform: scaleX(-1) rotate(-18deg);
+    }
+    .knot{
+      position:absolute;
+      left:50%; top:34px;
+      transform: translateX(-50%);
+      width:22px; height:18px;
+      border-radius:10px;
+      background: linear-gradient(145deg, rgba(255,240,180,.98), rgba(255,170,30,.88));
+      border:1px solid rgba(255,255,255,.24);
+      box-shadow: 0 0 14px rgba(255,217,102,.25);
+    }
+
+    .tap-hint{
+      color: rgba(255,255,255,.75);
+      font-size: 13px;
+      letter-spacing:.08em;
+      text-transform: uppercase;
+      margin-top:6px;
+      user-select:none;
+    }
+
+    /* --- opened state --- */
+    .gift.open .lid{
+      transform: translateY(-26px) rotateX(70deg) rotateZ(-2deg);
+    }
+    .gift.open{
+      animation: none;
+      transform: translateY(-6px);
+    }
+
+    /* --- Modal / Guide --- */
+    .modal{
+      position:fixed; inset:0;
+      display:grid;
+      place-items:center;
+      padding:18px;
+      background: rgba(0,0,0,.55);
+      backdrop-filter: blur(8px);
+      opacity:0;
+      pointer-events:none;
+      transition: opacity .25s ease;
+      z-index: 50;
+    }
+    .modal.show{
+      opacity:1;
+      pointer-events:auto;
+    }
+
+    .panel{
+      width:min(720px, 94vw);
+      border-radius:20px;
+      background: linear-gradient(180deg, rgba(255,255,255,.10), rgba(255,255,255,.06));
+      border:1px solid rgba(255,255,255,.14);
+      box-shadow: 0 40px 100px rgba(0,0,0,.55);
+      overflow:hidden;
+    }
+    .panel-header{
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      padding:16px 18px;
+      border-bottom:1px solid rgba(255,255,255,.10);
+      background: linear-gradient(90deg, rgba(255,77,141,.20), rgba(255,217,102,.12));
+    }
+    .panel-title{
+      margin:0;
+      font-weight:800;
+      letter-spacing:.06em;
+      text-transform:uppercase;
+      font-size:14px;
+      color: rgba(255,255,255,.92);
+    }
+    .close-btn{
+      pointer-events:auto;
+      border:none;
+      background: rgba(255,255,255,.10);
+      color: rgba(255,255,255,.88);
+      border:1px solid rgba(255,255,255,.14);
+      padding:8px 10px;
+      border-radius:12px;
+      cursor:pointer;
+      transition: .2s;
+    }
+    .close-btn:hover{ transform: translateY(-1px); background: rgba(255,255,255,.14); }
+
+    .panel-body{
+      padding:18px;
+      display:grid;
+      gap:14px;
+    }
+
+    .guide-grid{
+      display:grid;
+      grid-template-columns: 1fr;
+      gap:12px;
+    }
+    @media (min-width: 700px){
+      .guide-grid{ grid-template-columns: 1fr 1fr; }
+    }
+
+    .card{
+      padding:14px 14px 12px;
+      border-radius:16px;
+      background: rgba(0,0,0,.28);
+      border:1px solid rgba(255,255,255,.10);
+    }
+    .card h3{
+      margin:0 0 8px 0;
+      font-size:14px;
+      letter-spacing:.04em;
+      color: rgba(255,255,255,.92);
+      display:flex;
+      align-items:center;
+      gap:8px;
+    }
+    .badge{
+      font-size:11px;
+      padding:2px 8px;
+      border-radius:999px;
+      border:1px solid rgba(255,255,255,.16);
+      background: rgba(255,77,141,.18);
+      color: rgba(255,255,255,.9);
+    }
+    .card p{
+      margin:0;
+      color: rgba(255,255,255,.72);
+      font-size:13px;
+      line-height:1.5;
+    }
+
+    .actions{
+      display:flex;
+      flex-wrap:wrap;
+      gap:10px;
+      align-items:center;
+      justify-content:space-between;
+      margin-top:6px;
+    }
+    .primary{
+      border:none;
+      cursor:pointer;
+      padding:12px 14px;
+      border-radius:14px;
+      background: linear-gradient(90deg, rgba(255,77,141,.95), rgba(255,217,102,.92));
+      color:#1b0b12;
+      font-weight:900;
+      letter-spacing:.06em;
+      text-transform:uppercase;
+      box-shadow: 0 14px 30px rgba(255,77,141,.18);
+      transition:.2s;
+    }
+    .primary:hover{ transform: translateY(-1px); }
+    .secondary{
+      border:1px solid rgba(255,255,255,.18);
+      background: rgba(255,255,255,.06);
+      color: rgba(255,255,255,.88);
+      cursor:pointer;
+      padding:12px 14px;
+      border-radius:14px;
+      font-weight:700;
+      letter-spacing:.04em;
+      transition:.2s;
+    }
+    .secondary:hover{ background: rgba(255,255,255,.10); }
+
+    .footnote{
+      color: rgba(255,255,255,.55);
+      font-size:12px;
+      line-height:1.45;
+      margin:0;
+    }
+
+    /* stage (iframe overlay) */
+    #stage{
+      position:fixed; inset:0; z-index:9999;
+      display:none; background:#000;
+    }
+    #mainFrame{
+      width:100%; height:100%; border:0; display:block;
+      background:#000;
+    }
+    #backBtn{
+      position:fixed; top:16px; left:16px; z-index:10000;
+      padding:10px 12px; border-radius:12px;
+      border:1px solid rgba(255,255,255,.25);
+      background:rgba(0,0,0,.45); color:#fff; cursor:pointer;
+      backdrop-filter: blur(8px);
+    }
+  </style>
+</head>
+
+<body>
+  <!-- ✅ Nhạc nền ở trang cha => KHÔNG mất khi vào iframe -->
+  <audio id="bgm" src="audi1.mp3" loop autoplay muted playsinline preload="auto"></audio>
+
+  <!-- ✅ Stage hiển thị trang chính bằng iframe -->
+  <div id="stage">
+    <iframe id="mainFrame"
+            src=""
+            allow="camera; microphone; autoplay; fullscreen"
+            loading="eager"></iframe>
+    <button id="backBtn">← Quay lại</button>
+  </div>
+
+  <div class="sparkles"></div>
+
+  <main class="wrap" id="wrap">
+    <h1 class="title">Quà Valentine của em</h1>
+    <p class="subtitle">Nhấn vào hộp quà để xem hướng dẫn “chỉ tay” trước khi vào trái tim ✨</p>
+
+    <div class="gift-area">
+      <div class="gift" id="gift" role="button" tabindex="0" aria-label="Mở hộp quà">
+        <div class="lid"></div>
+        <div class="bow"><div class="knot"></div></div>
+        <div class="box">
+          <div class="ribbon-vert"></div>
+          <div class="ribbon-horz"></div>
+        </div>
+      </div>
+      <div class="tap-hint">Click / Enter để mở</div>
+    </div>
+  </main>
+
+  <!-- Modal guide -->
+  <div class="modal" id="modal" aria-hidden="true">
+    <div class="panel" role="dialog" aria-modal="true" aria-labelledby="guideTitle">
+      <div class="panel-header">
+        <h2 class="panel-title" id="guideTitle">Hướng dẫn chỉ tay (Hand Gestures)</h2>
+        <button class="close-btn" id="closeBtn" aria-label="Đóng hướng dẫn">✕</button>
+      </div>
+
+      <div class="panel-body">
+        <div class="guide-grid">
+          <div class="card">
+            <h3>❤️ 2 tay hình trái tim <span class="badge">TEXT</span></h3>
+            <p>Đưa <b>2 bàn tay</b> vào camera để hiện chữ.</p>
+          </div>
+          <div class="card">
+            <h3>🤏 Chụm ngón <span class="badge">FOCUS</span></h3>
+            <p>Chụm ngón cái + trỏ (pinch) để <b>Focus</b> ảnh.</p>
+          </div>
+          <div class="card">
+            <h3>✊ Nắm tay <span class="badge">TREE/HEART</span></h3>
+            <p>Nắm tay để chuyển về chế độ <b>Trái tim</b>.</p>
+          </div>
+          <div class="card">
+            <h3>🖐️ Xòe tay <span class="badge">SCATTER</span></h3>
+            <p>Xòe tay để vật thể <b>rải ra</b> (Scatter) và xoay theo chuyển động tay.</p>
+          </div>
+          <div class="card">
+            <h3>🖱️ Click ảnh <span class="badge">EASY VIEW</span></h3>
+            <p>Trên trang chính, <b>click trực tiếp ảnh</b> để focus, <b>ESC</b> để thoát.</p>
+          </div>
+          <div class="card">
+            <h3>⌨️ Phím tắt <span class="badge">HOTKEY</span></h3>
+            <p><b>ESC</b>: thoát focus • <b>←/→</b>: đổi ảnh khi focus.</p>
+          </div>
+        </div>
+
+        <div class="actions">
+          <button class="secondary" id="stayBtn">Xem lại hướng dẫn</button>
+          <button class="primary" id="goBtn">Mở Quà 💗</button>
+        </div>
+
+        <p class="footnote">
+          *Lưu ý: Cần cho phép camera để nhận diện tay. Không bật webcam vẫn xem được hiệu ứng 3D.
+        </p>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // ====== CONFIG ======
+    const MAIN_PAGE = "main.html"; // đổi nếu trang chính khác tên
+
+    const gift = document.getElementById("gift");
+    const modal = document.getElementById("modal");
+    const closeBtn = document.getElementById("closeBtn");
+    const goBtn = document.getElementById("goBtn");
+    const stayBtn = document.getElementById("stayBtn");
+
+    const stage = document.getElementById("stage");
+    const frame = document.getElementById("mainFrame");
+    const backBtn = document.getElementById("backBtn");
+    const wrap = document.getElementById("wrap");
+
+    // ====== AUDIO: autoplay muted + tự bật tiếng khi có tương tác đầu tiên (không cần button) ======
+    function setupAutoBgm() {
+      const audio = document.getElementById('bgm');
+      if (!audio) return;
+      audio.volume = 0.35;
+
+      // autoplay muted -> thường không bị chặn
+      audio.play().catch(()=>{});
+
+      // tương tác đầu tiên sẽ bật tiếng
+      const unlock = async () => {
+        try {
+          audio.muted = false;
+          await audio.play();
+        } catch (e) {
+          console.warn('Autoplay audio still blocked:', e);
+        }
+      };
+
+      window.addEventListener('pointerdown', unlock, { once:true });
+      window.addEventListener('keydown', unlock, { once:true });
+      window.addEventListener('touchstart', unlock, { once:true });
+
+      // khi quay lại tab, thử play lại nếu bị pause
+      document.addEventListener('visibilitychange', () => {
+        if (!document.hidden) audio.play().catch(()=>{});
+      });
+    }
+    setupAutoBgm();
+
+    function openGift(){
+      gift.classList.add("open");
+      setTimeout(() => {
+        modal.classList.add("show");
+        modal.setAttribute("aria-hidden", "false");
+      }, 380);
+    }
+    function closeModal(){
+      modal.classList.remove("show");
+      modal.setAttribute("aria-hidden", "true");
+    }
+
+    // Open gift
+    gift.addEventListener("click", openGift);
+    gift.addEventListener("keydown", (e) => {
+      if (e.key === "Enter" || e.key === " ") {
+        e.preventDefault();
+        openGift();
+      }
+    });
+
+    // Close modal
+    closeBtn.addEventListener("click", closeModal);
+    modal.addEventListener("click", (e) => { if (e.target === modal) closeModal(); });
+
+    // ESC đóng modal
+    window.addEventListener("keydown", (e) => {
+      if (e.key === "Escape" && modal.classList.contains("show")) closeModal();
+    });
+
+    // ✅ VÀO TIM ANH: mở iframe (KHÔNG reload => nhạc không mất)
+    goBtn.addEventListener("click", () => {
+      frame.src = MAIN_PAGE;
+      stage.style.display = "block";
+      closeModal();
+
+      // ẩn UI hộp quà cho gọn
+      wrap.style.display = "none";
+      document.querySelector(".sparkles").style.display = "none";
+    });
+
+    // Quay lại
+    backBtn.addEventListener("click", () => {
+      stage.style.display = "none";
+      frame.src = ""; // giải phóng tài nguyên
+
+      wrap.style.display = "";
+      document.querySelector(".sparkles").style.display = "";
+    });
+
+    // Xem lại hướng dẫn (rung nhẹ)
+    stayBtn.addEventListener("click", () => {
+      const panel = modal.querySelector(".panel");
+      panel.animate(
+        [
+          { transform: "translateY(0)" },
+          { transform: "translateY(-4px)" },
+          { transform: "translateY(0)" }
+        ],
+        { duration: 260, easing: "ease-out" }
+      );
+    });
+  </script>
+</body>
+</html>
