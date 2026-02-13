@@ -1,0 +1,32 @@
+<!doctype html>
+<html lang="vi">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Loading... 💗</title>
+  <style>
+    body{margin:0;display:grid;place-items:center;height:100vh;background:#000;color:#fff;font-family:system-ui}
+    .t{opacity:.75;letter-spacing:.08em;text-transform:uppercase;font-size:12px}
+  </style>
+</head>
+<body>
+  <div class="t">Loading... 💗</div>
+
+  <script>
+    const isMobile = (() => {
+      // chuẩn nhất trên Chrome/Edge mới
+      if (navigator.userAgentData && typeof navigator.userAgentData.mobile === 'boolean') {
+        return navigator.userAgentData.mobile;
+      }
+      // touch + coarse pointer
+      const touch = (navigator.maxTouchPoints || 0) > 0;
+      const coarse = (window.matchMedia && matchMedia('(pointer: coarse)').matches) || false;
+      const ua = /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
+      return coarse || touch || ua;
+    })();
+
+    const target = isMobile ? 'main.mobile.html' : 'main.desktop.html';
+    location.replace(target + location.search + location.hash);
+  </script>
+</body>
+</html>

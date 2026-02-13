@@ -1,0 +1,1079 @@
+<!DOCTYPE html>
+<html lang="VN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>💗 Quà Valentine cho em</title>
+
+  <style>
+    body { margin: 0; overflow: hidden; background-color: #000000; font-family: 'Times New Roman', serif; }
+    #canvas-container { width: 100vw; height: 100vh; position: absolute; top: 0; left: 0; z-index: 1; }
+
+    #ui-layer {
+      position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+      z-index: 10; pointer-events: none;
+      display: flex; flex-direction: column;
+      align-items: center;
+      padding-top: 40px;
+      box-sizing: border-box;
+    }
+
+    .ui-hidden { opacity: 0; pointer-events: none !important; }
+
+    #loader {
+      position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+      background: #000; z-index: 100;
+      display: flex; flex-direction: column; align-items: center; justify-content: center;
+      transition: opacity 0.8s ease-out;
+    }
+    .loader-text { color: #fdfdfd; font-size: 14px; letter-spacing: 4px; margin-top: 20px; text-transform: uppercase; font-weight: 100; }
+    .spinner {
+      width: 40px; height: 40px; border: 1px solid rgba(255, 255, 255, 0.2);
+      border-top: 1px solid #ffffff; border-radius: 50%;
+      animation: spin 1s linear infinite;
+    }
+    @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+
+    h1 {
+      color: #ffffff; font-size: 56px; margin: 0; font-weight: 400;
+      letter-spacing: 6px;
+      text-shadow: 0 0 50px rgba(255, 255, 255, 0.6);
+      background: linear-gradient(to bottom, #fff, #ffffff);
+      -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+      font-family: 'Cinzel', 'Times New Roman', serif;
+      opacity: 0.9;
+      transition: opacity 0.5s ease;
+    }
+
+    #webcam-wrapper {
+      position: absolute; bottom: 40px; right: 40px;
+      width: 120px; height: 90px;
+      border: 1px solid rgba(255,255,255,0.1);
+      overflow: hidden; opacity: 0;
+      pointer-events: none;
+    }
+  </style>
+
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Cinzel:wght@400;700&display=swap');
+  </style>
+
+  <script type="importmap">
+    {
+      "imports": {
+        "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js",
+        "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/",
+        "@mediapipe/tasks-vision": "https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.3/+esm"
+      }
+    }
+  </script>
+</head>
+
+<body>
+  <div id="loader">
+    <div class="spinner"></div>
+    <div class="loader-text">Loading 💗</div>
+  </div>
+
+  <div id="canvas-container"></div>
+
+  <div id="ui-layer">
+    <h1></h1>
+  </div>
+
+  <div id="webcam-wrapper">
+    <video id="webcam" autoplay playsinline style="display:none;"></video>
+    <canvas id="webcam-preview"></canvas>
+  </div>
+
+  <script type="module">
+  
+    import * as THREE from 'three';
+    import { EffectComposer } from 'three/addons/postprocessing/EffectComposer.js';
+    import { RenderPass } from 'three/addons/postprocessing/RenderPass.js';
+    import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js';
+    import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js';
+    import { FilesetResolver, HandLandmarker } from '@mediapipe/tasks-vision';
+
+    const CONFIG = {
+      colors: {
+        bg: 0x000000,
+        champagneGold: 0xffd966,
+        deepGreen: 0x03180a,
+        accentRed: 0x990000,
+        textParticles: 0xff4d8d
+      },
+      particles: {
+        count: 1200,
+        dustCount: 5000,
+        textCount: 15000, // ✅ chữ bằng Points (rất nhẹ), 15k vẫn ổn laptop
+        textScale: 1.0,
+        heartScale: 0.35,
+        heartThick: 5.0,
+        blinkAmplitude: 0.16,
+        blinkSpeedMin: 2.5,
+        blinkSpeedMax: 5.5,
+        driftAmplitude: 0.35,
+        driftSpeedMin: 0.2,
+        driftSpeedMax: 0.6,
+        rimColor: 0xffe6f0,
+        rimStrength: 0.06,
+        heartFocusScale: 2.4,
+        heartGlobalScale: 1.3
+      },
+      camera: { z: 50 }
+    };
+
+    const DEBUG = false;
+
+    function determinePerformanceSettings() {
+      const hc = navigator.hardwareConcurrency || 4;
+      const mem = navigator.deviceMemory || 4;
+      const perfScore = Math.min(hc * (mem / 2), 12);
+      const scale = perfScore >= 8 ? 1.0 : (perfScore >= 5 ? 0.85 : 0.7);
+
+      CONFIG.particles.count = Math.round(CONFIG.particles.count * scale);
+      CONFIG.particles.dustCount = Math.round(CONFIG.particles.dustCount * scale);
+
+      // textCount: laptop iGPU nên vừa phải
+      const textScale = perfScore >= 8 ? 1.0 : 0.75;
+      CONFIG.particles.textCount = Math.round(CONFIG.particles.textCount * textScale);
+
+      // ✅ laptop mượt hơn: cap pixel ratio thấp hơn 1.5
+      window.__perfPixelRatio = perfScore >= 8 ? 1.25 : 1.0;
+
+      if (DEBUG) console.log('Performance', { hc, mem, perfScore, scale, textScale, pixelRatio: window.__perfPixelRatio, textCount: CONFIG.particles.textCount });
+    }
+
+    const INITIAL_PHOTOS = [
+      "1.jpg",
+      "2.jpg",
+      "3.jpg",
+    ];
+
+    const STATE = {
+      mode: 'TREE',
+      focusTarget: null,
+      textFormed: false,
+      prevMode: null,
+      hand: { detected: false, x: 0, y: 0 },
+      rotation: { x: 0, y: 0 }
+    };
+
+    let scene, camera, renderer, composer;
+    let mainGroup;
+    let clock = new THREE.Clock();
+    let particleSystem = [];
+    let photoMeshGroup = new THREE.Group();
+    let handLandmarker, video, webcamCanvas, webcamCtx;
+    let caneTexture;
+    let isPaused = false;
+
+    // ====== PHOTO VIEW (click focus + gallery) ======
+    const raycaster = new THREE.Raycaster();
+    const pointer = new THREE.Vector2();
+    const photoRoots = [];
+    let currentPhotoIndex = 0;
+    let focusBackdrop = null;
+
+    // ====== TEXT POINT CLOUD (siêu mượt) ======
+    let textCloud = null;
+    let textGeom = null;
+    let textPosArr = null;
+    let textTargetArr = null;
+    let textScatterArr = null;
+    let textUpdateCursor = 0;
+
+    async function init() {
+      determinePerformanceSettings();
+      initThree();
+      setupEnvironment();
+      setupLights();
+      createTextures();
+      createParticles();
+      loadInitialPhotos();
+      createDustAndTextCloud(); // ✅ dust + text cloud (Points)
+      setupPostProcessing();
+      setupEvents();
+
+      setTimeout(() => {
+        initMediaPipe().catch(e => {
+          console.warn('MediaPipe init error (non-blocking):', e);
+          const loaderMsg = document.createElement('div');
+          loaderMsg.style.position = 'absolute';
+          loaderMsg.style.bottom = '20px';
+          loaderMsg.style.color = '#ffd6e6';
+          loaderMsg.style.fontSize = '12px';
+          loaderMsg.style.opacity = '0.9';
+          loaderMsg.textContent = 'Hand tracking unavailable — continuing without webcam.';
+          const loaderEl = document.getElementById('loader');
+          if (loaderEl) loaderEl.appendChild(loaderMsg);
+          handLandmarker = null;
+        });
+      }, 2200);
+
+      const loader = document.getElementById('loader');
+      if (loader) {
+        loader.style.opacity = 0;
+        setTimeout(() => loader.remove(), 800);
+      }
+
+      animate();
+    }
+
+    function initThree() {
+      const container = document.getElementById('canvas-container');
+
+      scene = new THREE.Scene();
+      scene.background = new THREE.Color(CONFIG.colors.bg);
+      scene.fog = new THREE.FogExp2(CONFIG.colors.bg, 0.01);
+
+      camera = new THREE.PerspectiveCamera(42, window.innerWidth / window.innerHeight, 0.1, 1000);
+      camera.position.set(0, 2, CONFIG.camera.z);
+
+      renderer = new THREE.WebGLRenderer({
+        antialias: true,
+        alpha: false,
+        powerPreference: "high-performance"
+      });
+      renderer.setSize(window.innerWidth, window.innerHeight);
+      renderer.setPixelRatio(Math.min(window.devicePixelRatio, window.__perfPixelRatio || 1.0));
+      renderer.toneMapping = THREE.ReinhardToneMapping;
+      renderer.toneMappingExposure = 1.35;
+      container.appendChild(renderer.domElement);
+
+      // ✅ backdrop cho focus ảnh (dễ xem)
+      const bgGeo = new THREE.PlaneGeometry(60, 40);
+      const bgMat = new THREE.MeshBasicMaterial({
+        color: 0x000000, transparent: true, opacity: 0.65, depthWrite: false
+      });
+      focusBackdrop = new THREE.Mesh(bgGeo, bgMat);
+      focusBackdrop.position.set(0, 0, -12);
+      focusBackdrop.visible = false;
+      camera.add(focusBackdrop);
+      scene.add(camera);
+
+      createStarfield();
+      mainGroup = new THREE.Group();
+      scene.add(mainGroup);
+    }
+
+    function setupEnvironment() {
+      const pmremGenerator = new THREE.PMREMGenerator(renderer);
+      scene.environment = pmremGenerator.fromScene(new RoomEnvironment(), 0.04).texture;
+      pmremGenerator.dispose();
+    }
+
+    function setupLights() {
+      scene.add(new THREE.AmbientLight(0xffe6f2, 0.45));
+
+      const innerLight = new THREE.PointLight(0xff77aa, 1.6, 22);
+      innerLight.position.set(0, 5, 0);
+      mainGroup.add(innerLight);
+
+      const spotGold = new THREE.SpotLight(0xff99cc, 900);
+      spotGold.position.set(30, 40, 40);
+      spotGold.angle = 0.5;
+      spotGold.penumbra = 0.5;
+      scene.add(spotGold);
+
+      const spotBlue = new THREE.SpotLight(0xff66aa, 500);
+      spotBlue.position.set(-30, 20, -30);
+      scene.add(spotBlue);
+
+      const fill = new THREE.DirectionalLight(0xffd6e6, 0.6);
+      fill.position.set(0, 0, 50);
+      scene.add(fill);
+    }
+
+    function setupPostProcessing() {
+      const renderScene = new RenderPass(scene, camera);
+      const bloomPass = new UnrealBloomPass(
+        new THREE.Vector2(window.innerWidth, window.innerHeight),
+        0.9, 0.5, 0.85
+      );
+
+      // ✅ laptop nhẹ hơn: bloom “vừa phải”
+      bloomPass.threshold = 0.88;
+      bloomPass.strength = 0.38;
+      bloomPass.radius = 0.45;
+
+      composer = new EffectComposer(renderer);
+      composer.addPass(renderScene);
+      composer.addPass(bloomPass);
+    }
+
+    function createTextures() {
+      const canvas = document.createElement('canvas');
+      canvas.width = 128; canvas.height = 128;
+      const ctx = canvas.getContext('2d');
+
+      ctx.fillStyle = '#fff7fb';
+      ctx.fillRect(0, 0, 128, 128);
+
+      ctx.fillStyle = '#ffc0cb';
+      ctx.beginPath();
+      for (let i = -128; i < 256; i += 32) {
+        ctx.moveTo(i, 0);
+        ctx.lineTo(i + 32, 128);
+        ctx.lineTo(i + 16, 128);
+        ctx.lineTo(i - 16, 0);
+      }
+      ctx.fill();
+
+      caneTexture = new THREE.CanvasTexture(canvas);
+      caneTexture.wrapS = THREE.RepeatWrapping;
+      caneTexture.wrapT = THREE.RepeatWrapping;
+      caneTexture.repeat.set(3, 3);
+    }
+
+    class Particle {
+      constructor(mesh, type, isDust = false) {
+        this.mesh = mesh;
+        this.type = type;
+        this.isDust = isDust;
+
+        this.posTree = new THREE.Vector3();
+        this.posScatter = new THREE.Vector3();
+
+        this.baseScale = mesh.scale.x || 1;
+
+        const speedMult = (type === 'PHOTO') ? 0.15 : 2.0; // ✅ ảnh quay chậm hơn
+        this.spinSpeed = new THREE.Vector3(
+          (Math.random() - 0.5) * speedMult,
+          (Math.random() - 0.5) * speedMult,
+          (Math.random() - 0.5) * speedMult
+        );
+
+        this.pulsePhase = Math.random() * Math.PI * 2;
+        this.blinkSpeed = CONFIG.particles.blinkSpeedMin + Math.random() * (CONFIG.particles.blinkSpeedMax - CONFIG.particles.blinkSpeedMin);
+
+        this.driftPhase = Math.random() * Math.PI * 2;
+        this.driftSpeed = CONFIG.particles.driftSpeedMin + Math.random() * (CONFIG.particles.driftSpeedMax - CONFIG.particles.driftSpeedMin);
+        this.driftAmp = CONFIG.particles.driftAmplitude * (0.5 + Math.random() * 0.8);
+
+        this.calculatePositions();
+      }
+
+      calculatePositions() {
+        const t = Math.random() * Math.PI * 2;
+        const r = Math.sqrt(Math.random(),1.4);
+
+        const scale = CONFIG.particles.heartScale;
+        const thickness = CONFIG.particles.heartThick;
+
+        const x_base = 16 * Math.pow(Math.sin(t), 3);
+        const y_base = 13 * Math.cos(t) - 5 * Math.cos(2 * t) - 2 * Math.cos(3 * t) - Math.cos(4 * t);
+        const z_base = (Math.random() - 0.5) * thickness * (1.2 - r);
+
+        const x = x_base * r * scale;
+        const y = (y_base * r * scale) + 4;
+        const z = z_base * scale * 5;
+        this.posTree.set(x, y, z);
+
+        let rScatter = this.isDust ? (12 + Math.random() * 20) : (8 + Math.random() * 12);
+        const theta = Math.random() * Math.PI * 2;
+        const phi = Math.acos(2 * Math.random() - 1);
+        this.posScatter.set(
+          rScatter * Math.sin(phi) * Math.cos(theta),
+          rScatter * Math.sin(phi) * Math.sin(theta),
+          rScatter * Math.cos(phi)
+        );
+      }
+
+      update(dt, mode, focusTargetMesh) {
+        // TARGET
+        let target = this.posTree;
+
+        if (mode === 'TEXT') {
+          target = this.posScatter; // ✅ chữ bằng Points, hạt khác nhường chỗ
+        } else if (mode === 'SCATTER') {
+          target = this.posScatter;
+        } else if (mode === 'FOCUS') {
+          if (this.mesh === focusTargetMesh) {
+            // ✅ ảnh ra trước camera hơn để dễ xem
+            const desiredWorldPos = new THREE.Vector3(0, 2, 28);
+            const invMatrix = new THREE.Matrix4().copy(mainGroup.matrixWorld).invert();
+            target = desiredWorldPos.applyMatrix4(invMatrix);
+          } else {
+            target = this.posScatter;
+          }
+        }
+
+        // MOVE
+        let lerpSpeed = 2.0;
+        if (mode === 'TEXT') lerpSpeed = 5.0;
+        if (mode === 'FOCUS' && this.mesh === focusTargetMesh) lerpSpeed = 6.0;
+
+        const time = clock.getElapsedTime();
+        let drift = 0;
+        if (mode !== 'TEXT') drift = Math.sin(time * this.driftSpeed + this.driftPhase) * this.driftAmp;
+
+        const targetWithDrift = target.clone();
+        targetWithDrift.y += drift;
+        this.mesh.position.lerp(targetWithDrift, lerpSpeed * dt);
+
+        // ROTATE
+        if (mode === 'SCATTER') {
+          this.mesh.rotation.x += this.spinSpeed.x * dt;
+          this.mesh.rotation.y += this.spinSpeed.y * dt;
+          this.mesh.rotation.z += this.spinSpeed.z * dt;
+        } else if (mode === 'TREE') {
+          this.mesh.rotation.x = THREE.MathUtils.lerp(this.mesh.rotation.x, 0, dt);
+          this.mesh.rotation.z = THREE.MathUtils.lerp(this.mesh.rotation.z, 0, dt);
+          this.mesh.rotation.y += 0.5 * dt;
+        } else if (mode === 'FOCUS' && this.mesh === focusTargetMesh) {
+          // ✅ khi focus: luôn nhìn camera
+          this.mesh.lookAt(camera.position);
+        }
+
+        // SCALE
+        let s = this.baseScale;
+
+        if (this.isDust) {
+          // Dust nền: TREE/TEXT ẩn, SCATTER nhấp nháy
+          if (mode === 'TREE' || mode === 'TEXT') s = 0;
+          else s = this.baseScale * (0.8 + 0.4 * Math.sin(clock.elapsedTime * 4 + this.mesh.id));
+        } else if (mode === 'SCATTER' && this.type === 'PHOTO') {
+          s = this.baseScale * 4.0; // ✅ ảnh to hơn để dễ thấy
+        } else if (mode === 'FOCUS') {
+          s = (this.mesh === focusTargetMesh) ? 10.0 : this.baseScale * 0.55; // ✅ focus rất to
+        }
+
+        const amp = CONFIG.particles.blinkAmplitude || 0.16;
+        const pulse = 1 + Math.sin(clock.getElapsedTime() * this.blinkSpeed + this.pulsePhase) * amp;
+        const finalScale = s * pulse;
+        this.mesh.scale.lerp(new THREE.Vector3(finalScale, finalScale, finalScale), 6 * dt);
+      }
+    }
+
+    function createHeartGeometry() {
+      const points = [];
+      for (let i = 0; i <= 30; i++) {
+        const t = (i / 30) * Math.PI;
+        const x = 16 * Math.pow(Math.sin(t), 3);
+        const y = 13 * Math.cos(t) - 5 * Math.cos(2*t) - 2 * Math.cos(3*t) - Math.cos(4*t);
+        const scale = 0.045;
+        points.push(new THREE.Vector2(Math.abs(x) * scale, (y * scale) * 0.8));
+      }
+      const heartGeo = new THREE.LatheGeometry(points, 32);
+      heartGeo.rotateX(Math.PI * 0.1);
+      return heartGeo;
+    }
+
+    function createSmallHeartGeometry() {
+      const points = [];
+      const segments = 18;
+      for (let i = 0; i <= segments; i++) {
+        const t = (i / segments) * Math.PI;
+        const x = 16 * Math.pow(Math.sin(t), 3);
+        const y = 13 * Math.cos(t) - 5 * Math.cos(2*t) - 2 * Math.cos(3*t) - Math.cos(4*t);
+        const scale = 0.03;
+        points.push(new THREE.Vector2(Math.abs(x) * scale, (y * scale) * 0.9));
+      }
+      const geo = new THREE.LatheGeometry(points, 24);
+      geo.rotateX(Math.PI * 0.08);
+      return geo;
+    }
+
+    function createStarfield() {
+      const starCount = 900;
+      const positions = new Float32Array(starCount * 3);
+      const colors = new Float32Array(starCount * 3);
+
+      for (let i = 0; i < starCount; i++) {
+        const r = 60 + Math.random() * 240;
+        const theta = Math.random() * Math.PI * 2;
+        const phi = Math.acos((Math.random() * 2) - 1);
+
+        const x = r * Math.sin(phi) * Math.cos(theta);
+        const y = r * Math.sin(phi) * Math.sin(theta);
+        const z = r * Math.cos(phi);
+
+        positions[i*3] = x; positions[i*3 + 1] = y; positions[i*3 + 2] = z;
+
+        const shade = 0.9 + Math.random() * 0.1;
+        colors[i*3] = shade; colors[i*3 + 1] = shade; colors[i*3 + 2] = 1.0;
+      }
+
+      const geo = new THREE.BufferGeometry();
+      geo.setAttribute('position', new THREE.BufferAttribute(positions, 3));
+      geo.setAttribute('color', new THREE.BufferAttribute(colors, 3));
+
+      const mat = new THREE.PointsMaterial({
+        size: 0.7,
+        vertexColors: true,
+        transparent: true,
+        opacity: 0.95,
+        depthWrite: false,
+        blending: THREE.AdditiveBlending
+      });
+
+      scene.add(new THREE.Points(geo, mat));
+    }
+
+    function addRimToMesh(proto, colorHex, strength, scaleMult = 1.06) {
+      const rimMat = new THREE.MeshBasicMaterial({
+        color: colorHex,
+        transparent: true,
+        opacity: strength,
+        blending: THREE.AdditiveBlending,
+        depthWrite: false
+      });
+
+      const rim = proto.clone(true);
+      rim.traverse(n => { if (n.isMesh) { n.material = rimMat; n.renderOrder = 999; } });
+      rim.scale.multiplyScalar(scaleMult);
+      proto.add(rim);
+    }
+
+    function createBearMesh() {
+      const g = new THREE.Group();
+      const bearMat = new THREE.MeshStandardMaterial({
+        color: 0xffe0c8, roughness: 0.7, metalness: 0.02,
+        emissive: 0xffe6e0, emissiveIntensity: 0.03
+      });
+
+      const head = new THREE.Mesh(new THREE.SphereGeometry(0.5, 16, 16), bearMat);
+      head.position.set(0, 0.25, 0);
+      g.add(head);
+
+      const body = new THREE.Mesh(new THREE.SphereGeometry(0.65, 16, 16), bearMat.clone());
+      body.position.set(0, -0.45, 0);
+      g.add(body);
+
+      const earL = new THREE.Mesh(new THREE.SphereGeometry(0.18, 12, 12), head.material);
+      const earR = earL.clone();
+      earL.position.set(-0.35, 0.7, 0);
+      earR.position.set(0.35, 0.7, 0);
+      g.add(earL); g.add(earR);
+
+      const eyeMat = new THREE.MeshBasicMaterial({ color: 0x2b1b17 });
+      const eyeL = new THREE.Mesh(new THREE.SphereGeometry(0.06, 8, 8), eyeMat);
+      const eyeR = eyeL.clone();
+      eyeL.position.set(-0.15, 0.18, 0.45);
+      eyeR.position.set(0.15, 0.18, 0.45);
+      g.add(eyeL); g.add(eyeR);
+
+      return g;
+    }
+
+    function createCandyMesh() {
+      const h = 0.7;
+      const geo = new THREE.CylinderGeometry(0.28, 0.28, h, 16, 1, true);
+      const mat = new THREE.MeshStandardMaterial({
+        color: 0xfff1f6,
+        map: caneTexture || null,
+        metalness: 0.08,
+        roughness: 0.28,
+        emissive: 0xffe8ef,
+        emissiveIntensity: 0.05
+      });
+      if (caneTexture) { caneTexture.repeat.set(2, 1); caneTexture.needsUpdate = true; }
+      const mesh = new THREE.Mesh(geo, mat);
+
+      const capMat = new THREE.MeshStandardMaterial({ color: 0xffffff, metalness: 0.12, roughness: 0.25 });
+      const end1 = new THREE.Mesh(new THREE.SphereGeometry(0.28, 12, 12), capMat);
+      const end2 = end1.clone();
+      end1.position.y = h/2; end2.position.y = -h/2;
+
+      const group = new THREE.Group();
+      group.add(mesh); group.add(end1); group.add(end2);
+      return group;
+    }
+
+    function createParticles() {
+      const heartGeo = createSmallHeartGeometry();
+      const bearProto = createBearMesh();
+      const candyProto = createCandyMesh();
+
+      const heartMat = new THREE.MeshPhysicalMaterial({
+        color: 0xffb3c6,
+        metalness: 0.12,
+        roughness: 0.28,
+        clearcoat: 0.35,
+        clearcoatRoughness: 0.18,
+        emissive: 0xffd6e6,
+        emissiveIntensity: 0.18,
+        envMapIntensity: 0.9
+      });
+
+      const smallHeartProto = new THREE.Mesh(heartGeo, heartMat);
+      addRimToMesh(smallHeartProto, CONFIG.particles.rimColor, CONFIG.particles.rimStrength, 1.08);
+      addRimToMesh(bearProto, CONFIG.particles.rimColor, CONFIG.particles.rimStrength, 1.06);
+      addRimToMesh(candyProto, CONFIG.particles.rimColor, CONFIG.particles.rimStrength, 1.04);
+
+      const poolSize = Math.min(Math.max(8, Math.floor(CONFIG.particles.count / 15)), 60);
+      const heartPool = new Array(poolSize).fill(0).map(() => heartMat.clone());
+
+      let baseBearMat = null;
+      bearProto.traverse(n => { if (!baseBearMat && n.isMesh && n.material && n.material.isMeshStandardMaterial) baseBearMat = n.material; });
+      const bearPool = baseBearMat ? new Array(poolSize).fill(0).map(() => baseBearMat.clone()) : [];
+
+      let baseCandyMat = null;
+      candyProto.traverse(n => { if (!baseCandyMat && n.isMesh && n.material && n.material.isMeshStandardMaterial) baseCandyMat = n.material; });
+      const candyPool = baseCandyMat ? new Array(poolSize).fill(0).map(() => baseCandyMat.clone()) : [];
+
+      const batchSize = 60;
+      let created = 0;
+
+      function createBatch() {
+        const end = Math.min(created + batchSize, CONFIG.particles.count);
+        for (let i = created; i < end; i++) {
+          const r = Math.random();
+          let mesh, type;
+
+          if (r < 0.55) {
+            mesh = smallHeartProto.clone(true);
+            const m = heartPool[i % poolSize];
+            mesh.traverse(n => { if (n.isMesh && n.material && n.material.blending !== THREE.AdditiveBlending) n.material = m; });
+            type = 'HEART';
+          } else if (r < 0.80) {
+            mesh = bearProto.clone(true);
+            const m = bearPool[i % poolSize] || null;
+            if (m) mesh.traverse(n => { if (n.isMesh && n.material && n.material.blending !== THREE.AdditiveBlending) n.material = m; });
+            type = 'BEAR';
+          } else {
+            mesh = candyProto.clone(true);
+            const m = candyPool[i % poolSize] || null;
+            if (m) mesh.traverse(n => { if (n.isMesh && n.material && n.material.blending !== THREE.AdditiveBlending) n.material = m; });
+            type = 'CANDY';
+          }
+
+          const s = 0.18 + Math.random() * 0.42;
+          mesh.scale.set(s, s, s);
+          mesh.rotation.set((Math.random()-0.5)*0.4, Math.random()*Math.PI*2, (Math.random()-0.5)*0.4);
+
+          mainGroup.add(mesh);
+          particleSystem.push(new Particle(mesh, type, false));
+        }
+
+        created = end;
+        if (created < CONFIG.particles.count) setTimeout(createBatch, 0);
+      }
+
+      createBatch();
+
+      // topper
+      const bigHeart = createHeartGeometry();
+      const topper = new THREE.Mesh(bigHeart, heartMat);
+      topper.scale.set(1.8, 1.8, 1.8);
+      bigHeart.computeBoundingBox();
+      const bb = bigHeart.boundingBox;
+      const approxTopY = (bb?.max?.y ?? 6) * topper.scale.y + 4;
+      topper.position.set(0, approxTopY, 0);
+      topper.rotation.set(-0.2, 0, 0);
+      mainGroup.add(topper);
+
+      mainGroup.add(photoMeshGroup);
+    }
+
+    // ✅ dust + text bằng Points (mượt)
+    function createDustAndTextCloud() {
+      // Dust nền
+      const dustGeo = new THREE.TetrahedronGeometry(0.08, 0);
+      const dustMat = new THREE.MeshBasicMaterial({
+        color: 0xffd9e6,
+        transparent: true,
+        opacity: 0.4
+      });
+
+      for (let i = 0; i < CONFIG.particles.dustCount; i++) {
+        if (Math.random() < 0.06) {
+          const tinyBear = createBearMesh();
+          const s = 0.08 + Math.random() * 0.1;
+          tinyBear.scale.setScalar(s);
+          tinyBear.traverse(n => { if (n.isMesh && n.material) n.material.transparent = true; });
+          mainGroup.add(tinyBear);
+          particleSystem.push(new Particle(tinyBear, 'BEAR', true));
+        } else {
+          const mesh = new THREE.Mesh(dustGeo, dustMat);
+          mesh.scale.setScalar(0.06 + Math.random() * 0.1);
+          mainGroup.add(mesh);
+          particleSystem.push(new Particle(mesh, 'DUST', true));
+        }
+      }
+
+      // Text cloud
+      const count = CONFIG.particles.textCount;
+      textGeom = new THREE.BufferGeometry();
+      textPosArr = new Float32Array(count * 3);
+      textTargetArr = new Float32Array(count * 3);
+      textScatterArr = new Float32Array(count * 3);
+
+      // init scatter
+      for (let i = 0; i < count; i++) {
+        const idx = i * 3;
+        const r = 18 + Math.random() * 18;
+        const theta = Math.random() * Math.PI * 2;
+        const phi = Math.acos(2 * Math.random() - 1);
+
+        const x = r * Math.sin(phi) * Math.cos(theta);
+        const y = r * Math.sin(phi) * Math.sin(theta) + 2;
+        const z = r * Math.cos(phi);
+
+        textPosArr[idx] = x; textPosArr[idx+1] = y; textPosArr[idx+2] = z;
+        textScatterArr[idx] = x; textScatterArr[idx+1] = y; textScatterArr[idx+2] = z;
+        textTargetArr[idx] = x; textTargetArr[idx+1] = y; textTargetArr[idx+2] = z;
+      }
+
+      const posAttr = new THREE.BufferAttribute(textPosArr, 3);
+      posAttr.setUsage(THREE.DynamicDrawUsage);
+      textGeom.setAttribute('position', posAttr);
+
+      const textMat = new THREE.PointsMaterial({
+        color: CONFIG.colors.textParticles,
+        size: 0.085,
+        transparent: true,
+        opacity: 0.95,
+        depthWrite: false,
+        blending: THREE.AdditiveBlending
+      });
+
+      textCloud = new THREE.Points(textGeom, textMat);
+      textCloud.visible = false;
+      mainGroup.add(textCloud);
+    }
+
+    function createTextPoints(text, gap = 2) {
+      const width = 2048, height = 1024;
+      const canvas = document.createElement('canvas');
+      canvas.width = width; canvas.height = height;
+      const ctx = canvas.getContext('2d', { willReadFrequently: true });
+
+      ctx.fillStyle = '#000';
+      ctx.fillRect(0, 0, width, height);
+
+      ctx.fillStyle = '#fff';
+      ctx.font = '900 250px Arial';
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillText(text, width / 2, height / 2);
+
+      const data = ctx.getImageData(0, 0, width, height).data;
+      const points = [];
+
+      for (let y = 0; y < height; y += gap) {
+        for (let x = 0; x < width; x += gap) {
+          const i = (y * width + x) * 4;
+          if (data[i] > 128) {
+            const nx = (x - width / 2) / width;
+            const ny = (height / 2 - y) / height;
+            points.push(new THREE.Vector3(nx * 45, ny * 20 + 2, 0));
+          }
+        }
+      }
+
+      for (let i = points.length - 1; i > 0; i--) {
+        const j = (Math.random() * (i + 1)) | 0;
+        [points[i], points[j]] = [points[j], points[i]];
+      }
+      return points;
+    }
+
+    function formTextWithDust(text) {
+      if (!textTargetArr) return;
+      const msg = text || "ANH YÊU EM";
+      const pts = createTextPoints(msg, 2);
+      if (!pts.length) return;
+
+      const count = (textTargetArr.length / 3) | 0;
+      for (let i = 0; i < count; i++) {
+        const idx = i * 3;
+        const p = pts[i % pts.length];
+        textTargetArr[idx] = p.x + (Math.random() - 0.5) * 0.15;
+        textTargetArr[idx + 1] = p.y + (Math.random() - 0.5) * 0.15;
+        textTargetArr[idx + 2] = p.z + (Math.random() - 0.5) * 0.25;
+      }
+    }
+
+    function updateTextCloud(dt) {
+      if (!textCloud || !textGeom) return;
+
+      const wantText = (STATE.mode === 'TEXT');
+      textCloud.visible = wantText;
+
+      const target = wantText ? textTargetArr : textScatterArr;
+      const k = wantText ? 10.0 : 4.5;
+      const t = Math.min(1, k * dt);
+
+      const count = (textPosArr.length / 3) | 0;
+      const CHUNK = 6000; // ✅ laptop mượt đều
+      const start = textUpdateCursor;
+      const end = Math.min(start + CHUNK, count);
+
+      for (let i = start; i < end; i++) {
+        const idx = i * 3;
+        textPosArr[idx]     += (target[idx]     - textPosArr[idx])     * t;
+        textPosArr[idx + 1] += (target[idx + 1] - textPosArr[idx + 1]) * t;
+        textPosArr[idx + 2] += (target[idx + 2] - textPosArr[idx + 2]) * t;
+      }
+
+      textUpdateCursor = (end >= count) ? 0 : end;
+      textGeom.attributes.position.needsUpdate = true;
+    }
+
+    function loadInitialPhotos() {
+      INITIAL_PHOTOS.forEach(url => {
+        new THREE.TextureLoader().load(
+          url,
+          (t) => { addPhotoToScene(t); },
+          undefined,
+          (err) => { console.warn('Failed loading initial photo', url, err); }
+        );
+      });
+    }
+
+    function addPhotoToScene(texture) {
+      // ✅ ảnh nét hơn
+      texture.colorSpace = THREE.SRGBColorSpace;
+      texture.wrapS = THREE.ClampToEdgeWrapping;
+      texture.wrapT = THREE.ClampToEdgeWrapping;
+      texture.generateMipmaps = true;
+      texture.minFilter = THREE.LinearMipmapLinearFilter;
+      texture.magFilter = THREE.LinearFilter;
+      texture.anisotropy = renderer.capabilities.getMaxAnisotropy();
+      texture.needsUpdate = true;
+
+      const frameGeo = new THREE.BoxGeometry(1.4, 1.4, 0.05);
+      const frameMat = new THREE.MeshStandardMaterial({
+        color: CONFIG.colors.champagneGold,
+        metalness: 1.0,
+        roughness: 0.1
+      });
+      const frame = new THREE.Mesh(frameGeo, frameMat);
+
+      const photoGeo = new THREE.PlaneGeometry(1.2, 1.2);
+      const photoMat = new THREE.MeshBasicMaterial({ map: texture });
+      const photo = new THREE.Mesh(photoGeo, photoMat);
+      photo.position.z = 0.04;
+
+      const group = new THREE.Group();
+      group.add(frame);
+      group.add(photo);
+
+      group.scale.setScalar(0.8);
+
+      // ✅ để click focus được
+      group.userData.isPhoto = true;
+      group.userData.photoIndex = photoRoots.length;
+      photoRoots.push(group);
+
+      photoMeshGroup.add(group);
+      particleSystem.push(new Particle(group, 'PHOTO', false));
+    }
+
+    function findPhotoRoot(obj) {
+      let cur = obj;
+      while (cur && cur.parent && cur.parent !== photoMeshGroup) cur = cur.parent;
+      return cur;
+    }
+
+    function focusPhoto(group) {
+      if (!group) return;
+      STATE.mode = 'FOCUS';
+      STATE.focusTarget = group;
+      currentPhotoIndex = group.userData.photoIndex ?? 0;
+    }
+
+    async function initMediaPipe() {
+      video = document.getElementById('webcam');
+      webcamCanvas = document.getElementById('webcam-preview');
+      webcamCtx = webcamCanvas.getContext('2d');
+      webcamCanvas.width = 160;
+      webcamCanvas.height = 120;
+
+      const vision = await FilesetResolver.forVisionTasks(
+        "https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.3/wasm"
+      );
+
+      handLandmarker = await HandLandmarker.createFromOptions(vision, {
+        baseOptions: {
+          modelAssetPath: "https://storage.googleapis.com/mediapipe-models/hand_landmarker/hand_landmarker/float16/1/hand_landmarker.task",
+          delegate: "GPU"
+        },
+        runningMode: "VIDEO",
+        numHands: 2
+      });
+
+      if (navigator.mediaDevices?.getUserMedia) {
+        try {
+          const stream = await navigator.mediaDevices.getUserMedia({ video: true });
+          video.srcObject = stream;
+          video.addEventListener("loadeddata", predictWebcam);
+        } catch (e) {
+          console.warn("User denied webcam or not available:", e);
+          handLandmarker = null;
+        }
+      }
+    }
+
+    let lastVideoTime = -1;
+    async function predictWebcam() {
+      if (video.currentTime !== lastVideoTime) {
+        lastVideoTime = video.currentTime;
+        if (handLandmarker) {
+          const result = handLandmarker.detectForVideo(video, performance.now());
+          processGestures(result);
+        }
+      }
+      requestAnimationFrame(predictWebcam);
+    }
+
+    function processGestures(result) {
+      if (result.landmarks && result.landmarks.length >= 2 && Array.isArray(result.landmarks[0]) && Array.isArray(result.landmarks[1])) {
+        STATE.hand.detected = true;
+
+        if (!STATE.textFormed) {
+          STATE.prevMode = STATE.mode;
+          STATE.mode = 'TEXT';
+          STATE.textFormed = true;
+          formTextWithDust('ANH YÊU EM');
+        }
+      } else if (result.landmarks && result.landmarks.length > 0) {
+        if (STATE.textFormed) {
+          STATE.textFormed = false;
+          STATE.mode = STATE.prevMode || 'SCATTER';
+        }
+
+        STATE.hand.detected = true;
+        const lm = result.landmarks[0];
+        STATE.hand.x = (lm[9].x - 0.5) * 2;
+        STATE.hand.y = (lm[9].y - 0.5) * 2;
+
+        const thumb = lm[4];
+        const index = lm[8];
+        const pinchDist = Math.hypot(thumb.x - index.x, thumb.y - index.y);
+
+        const wrist = lm[0];
+        const tips = [lm[8], lm[12], lm[16], lm[20]];
+        let avgDist = 0;
+        tips.forEach(t => avgDist += Math.hypot(t.x - wrist.x, t.y - wrist.y));
+        avgDist /= 4;
+
+        if (pinchDist < 0.05) {
+          if (STATE.mode !== 'FOCUS') {
+            STATE.mode = 'FOCUS';
+            if (photoRoots.length) {
+              STATE.focusTarget = photoRoots[(Math.random() * photoRoots.length) | 0];
+            }
+          }
+        } else if (avgDist < 0.25) {
+          STATE.mode = 'TREE';
+          STATE.focusTarget = null;
+        } else if (avgDist > 0.4) {
+          STATE.mode = 'SCATTER';
+          STATE.focusTarget = null;
+        }
+      } else {
+        if (STATE.textFormed) {
+          STATE.textFormed = false;
+          STATE.mode = STATE.prevMode || 'SCATTER';
+        }
+        STATE.hand.detected = false;
+      }
+    }
+
+    function setupEvents() {
+      let resizeTimer = null;
+      window.addEventListener('resize', () => {
+        clearTimeout(resizeTimer);
+        resizeTimer = setTimeout(() => {
+          camera.aspect = window.innerWidth / window.innerHeight;
+          camera.updateProjectionMatrix();
+          renderer.setSize(window.innerWidth, window.innerHeight);
+          if (composer && typeof composer.setSize === 'function') composer.setSize(window.innerWidth, window.innerHeight);
+        }, 150);
+      });
+
+      document.addEventListener('visibilitychange', () => {
+        isPaused = document.hidden;
+        if (!isPaused) {
+          camera.aspect = window.innerWidth / window.innerHeight;
+          camera.updateProjectionMatrix();
+          renderer.setSize(window.innerWidth, window.innerHeight);
+          if (composer && typeof composer.setSize === 'function') composer.setSize(window.innerWidth, window.innerHeight);
+        }
+      });
+
+      // ✅ CLICK chọn ảnh để focus
+      renderer.domElement.addEventListener('pointerdown', (e) => {
+        const rect = renderer.domElement.getBoundingClientRect();
+        pointer.x = ((e.clientX - rect.left) / rect.width) * 2 - 1;
+        pointer.y = -((e.clientY - rect.top) / rect.height) * 2 + 1;
+        raycaster.setFromCamera(pointer, camera);
+
+        const hits = raycaster.intersectObjects(photoMeshGroup.children, true);
+        if (hits.length) {
+          const root = findPhotoRoot(hits[0].object);
+          if (root && root.userData.isPhoto) focusPhoto(root);
+        }
+      });
+
+      // ✅ ESC thoát focus, ←/→ chuyển ảnh
+      window.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape' && STATE.mode === 'FOCUS') {
+          STATE.mode = 'SCATTER';
+          STATE.focusTarget = null;
+        }
+
+        if (STATE.mode === 'FOCUS' && photoRoots.length) {
+          if (e.key === 'ArrowRight') {
+            currentPhotoIndex = (currentPhotoIndex + 1) % photoRoots.length;
+            focusPhoto(photoRoots[currentPhotoIndex]);
+          }
+          if (e.key === 'ArrowLeft') {
+            currentPhotoIndex = (currentPhotoIndex - 1 + photoRoots.length) % photoRoots.length;
+            focusPhoto(photoRoots[currentPhotoIndex]);
+          }
+        }
+      });
+    }
+
+    function animate() {
+      requestAnimationFrame(animate);
+      if (isPaused) return;
+
+      const dt = clock.getDelta();
+
+      if (STATE.mode === 'TEXT') {
+        STATE.rotation.y += 0.05 * dt;
+        STATE.rotation.x += (0 - STATE.rotation.x) * 1.0 * dt;
+      } else if (STATE.mode === 'SCATTER' && STATE.hand.detected) {
+        const targetRotY = STATE.hand.x * Math.PI * 0.9;
+        const targetRotX = STATE.hand.y * Math.PI * 0.25;
+        STATE.rotation.y += (targetRotY - STATE.rotation.y) * 3.0 * dt;
+        STATE.rotation.x += (targetRotX - STATE.rotation.x) * 3.0 * dt;
+      } else {
+        if (STATE.mode === 'TREE') {
+          STATE.rotation.y += 0.3 * dt;
+          STATE.rotation.x += (0 - STATE.rotation.x) * 2.0 * dt;
+        } else {
+          STATE.rotation.y += 0.1 * dt;
+        }
+      }
+
+      mainGroup.rotation.y = STATE.rotation.y;
+      mainGroup.rotation.x = STATE.rotation.x;
+
+      // backdrop khi focus
+      if (focusBackdrop) focusBackdrop.visible = (STATE.mode === 'FOCUS');
+
+      particleSystem.forEach(p => p.update(dt, STATE.mode, STATE.focusTarget));
+      updateTextCloud(dt);
+
+      if (STATE.mode === 'TREE') {
+        const beat = 1 + Math.sin(clock.getElapsedTime() * 8) * 0.05;
+        mainGroup.scale.set(beat, beat, beat);
+      } else {
+        mainGroup.scale.set(1, 1, 1);
+      }
+
+      if (composer) composer.render();
+      else renderer.render(scene, camera);
+    }
+
+    init();
+  </script>
+</body>
+</html>
